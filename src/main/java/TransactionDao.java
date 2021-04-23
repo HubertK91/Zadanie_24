@@ -14,9 +14,12 @@ class TransactionDao {
     }
 
     void add(Transaction transaction) {
-        final String sql = String.format("INSERT INTO transaction(type,description,amount,date) VALUES ('%s', '%s', %f, '%s')",
-                transaction.getType(), transaction.getDescription(), transaction.getAmount(), Date.valueOf(transaction.getDate()));
-        try (Statement statement = connection.createStatement()) {
+        final String sql = "INSERT INTO transaction(type,description,amount,date) VALUES (?, ?, ?, ?)";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, String.valueOf(transaction.getType()));
+            statement.setString(2, transaction.getDescription());
+            statement.setDouble(3, transaction.getAmount());
+            statement.setDate(4, Date.valueOf(transaction.getDate()));
             statement.executeUpdate(sql, Statement.RETURN_GENERATED_KEYS);
             ResultSet generatedKeys = statement.getGeneratedKeys();
             if (generatedKeys.next()) {
@@ -28,8 +31,9 @@ class TransactionDao {
     }
 
     boolean delete(int id) {
-        final String sql = "DELETE FROM transaction WHERE id = " + id;
-        try (Statement statement = connection.createStatement()) {
+        final String sql = "DELETE FROM transaction WHERE id = ?";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, id);
             int updatedRows = statement.executeUpdate(sql);
             return updatedRows != 0;
         } catch (SQLException e) {
@@ -38,14 +42,17 @@ class TransactionDao {
     }
 
     boolean update(Transaction transaction) {
-        final String sql = String.format("""
+        final String sql = """
                         UPDATE
                          transaction 
-                        SET type = '%s',description = '%s',amount = %f,date = '%s' 
-                        WHERE id = %d""",
-                transaction.getType(), transaction.getDescription(), transaction.getAmount(),
-                transaction.getDate(), transaction.getId());
-        try (Statement statement = connection.createStatement()) {
+                        SET type = ?,description = ?,amount = ?,date = ? 
+                        WHERE id = ?""";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, String.valueOf(transaction.getType()));
+            statement.setString(2, transaction.getDescription());
+            statement.setDouble(3, transaction.getAmount());
+            statement.setDate(4, Date.valueOf(transaction.getDate()));
+            statement.setInt(5, transaction.getId());
             int updatedRows = statement.executeUpdate(sql);
             return updatedRows != 0;
         } catch (SQLException e) {
@@ -53,32 +60,7 @@ class TransactionDao {
         }
     }
 
-    void displayIncomes() {
-        fetchAndDisplay(Type.INCOME);
-    }
 
-    void displayExpense() {
-        fetchAndDisplay(Type.EXPENSE);
-    }
-
-    private void fetchAndDisplay(Type type) {
-        String sql = "SELECT * FROM transaction WHERE type = ?";
-        try (PreparedStatement prepareStatement = connection.prepareStatement(sql)) {
-            prepareStatement.setString(1, String.valueOf(type));
-            ResultSet resultSet = prepareStatement.executeQuery();
-            while (resultSet.next()) {
-                int id = resultSet.getInt("id");
-                String description = resultSet.getString("description");
-                double amount = resultSet.getDouble("amount");
-                Date date = resultSet.getDate("date");
-
-                System.out.println("id transakcji: " + id + ", opis transakcji: " + description + ", kwota transakcji: "
-                        + amount + "zł, data transakcji: " + date);
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-    }
 
     void close() {
         try {
