@@ -1,10 +1,10 @@
-import java.sql.*;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Scanner;
 
 class TransactionsApp {
     private static final TransactionDao TRANSACTION_DAO = new TransactionDao();
-    private static Connection connection;
+    private static Scanner scanner;
 
     public static void main(String[] args) {
         boolean optionExit = true;
@@ -16,21 +16,26 @@ class TransactionsApp {
             System.out.println("4 - wyświetlanie wszystkich przychodów");
             System.out.println("5 - wyświetlanie wszystkich wydatków");
             System.out.println("6 - wyjście z programu");
-            Scanner scanner = new Scanner(System.in);
+            scanner = new Scanner(System.in);
             String option = scanner.nextLine();
 
             switch (option) {
                 case "1":
                     TRANSACTION_DAO.add(new Transaction(Type.INCOME, "pożyczka z banku",
-                            20_000, LocalDate.of(2021, 5, 12)));
+                            20_000.00, LocalDate.of(2021, 5, 12)));
                     break;
                 case "2":
-                    Transaction komputer = new Transaction(1, Type.EXPENSE, "kupno komputera",
-                            7_000, LocalDate.of(2020, 5, 18));
-                    TRANSACTION_DAO.update(komputer);
+                    Transaction computer = new Transaction(2, Type.EXPENSE, "kupno komputera",
+                            7_000.00, LocalDate.of(2020, 5, 18));
+                    boolean update = TRANSACTION_DAO.update(computer);
+                    if (update) {
+                        System.out.println("Pomyślnie zmodyfikowano transakcje");
+                    } else {
+                        System.out.println("Nie zmodyfikowano transakcji");
+                    }
                     break;
                 case "3":
-                    TRANSACTION_DAO.delete(1);
+                    delete();
                     break;
                 case "4":
                     displayIncomes();
@@ -48,30 +53,31 @@ class TransactionsApp {
         }
     }
 
+
+    private static void delete() {
+        System.out.println("Podaj id transakcji do usunięcia");
+        int id = scanner.nextInt();
+        boolean delete = TRANSACTION_DAO.delete(id);
+        if (delete) {
+            System.out.println("Pomyślnie usunięto transakcje");
+        } else {
+            System.out.println("Nie ma transakcji o podanym id");
+        }
+    }
+
     private static void displayIncomes() {
-        fetchAndDisplay(Type.INCOME);
+        List<Transaction> incomesTransactions = TRANSACTION_DAO.fetchAndDisplay(Type.INCOME);
+        for (Transaction transaction : incomesTransactions) {
+            System.out.println(transaction);
+        }
     }
 
     private static void displayExpense() {
-        fetchAndDisplay(Type.EXPENSE);
-    }
-
-    private static void fetchAndDisplay(Type type) {
-        String sql = "SELECT * FROM transaction WHERE type = ?";
-        try (PreparedStatement prepareStatement = connection.prepareStatement(sql)) {
-            prepareStatement.setString(1, String.valueOf(type));
-            ResultSet resultSet = prepareStatement.executeQuery();
-            while (resultSet.next()) {
-                int id = resultSet.getInt("id");
-                String description = resultSet.getString("description");
-                double amount = resultSet.getDouble("amount");
-                Date date = resultSet.getDate("date");
-
-                System.out.println("id transakcji: " + id + ", opis transakcji: " + description + ", kwota transakcji: "
-                        + amount + "zł, data transakcji: " + date);
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+        List<Transaction> expenseTransactions = TRANSACTION_DAO.fetchAndDisplay(Type.EXPENSE);
+        for (Transaction transaction : expenseTransactions) {
+            System.out.println(transaction);
         }
     }
 }
+
+
